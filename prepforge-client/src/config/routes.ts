@@ -1,0 +1,15 @@
+export const ROUTES = {
+  LOGIN: '/login',
+  REGISTER: '/register',
+  APP: '/app',
+  DASHBOARD: '/app/dashboard',
+  PROBLEMS: '/app/problems',
+  PROBLEM_DETAIL: (id: string) => `/app/problems/${id}`,
+  REVISIONS: '/app/revisions',
+  ANALYTICS: '/app/analytics',
+  GOALS: '/app/goals',
+  ROADMAPS: '/app/roadmaps',
+  ROADMAP_DETAIL: (id: string) => `/app/roadmaps/${id}`,
+  IMPORT_EXPORT: '/app/import',
+  SETTINGS: '/app/settings',
+} as const;
