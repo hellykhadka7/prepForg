@@ -3,6 +3,7 @@ const Problem = require('../models/Problem.model');
 const Revision = require('../models/Revision.model');
 const Activity = require('../models/Activity.model');
 const { getUTCToday, addDays, getISOWeek } = require('../utils/dateUtils');
+const { getCompletedProblemIds } = require('./completion.service');
 const mongoose = require('mongoose');
 
 /**
@@ -54,26 +55,18 @@ const getWeeklyStats = async (userId) => {
 
 /**
  * Difficulty distribution: Easy / Medium / Hard counts.
+ * Uses the union of accepted solutions + manual completions.
  */
 const getDifficultyDistribution = async (userId) => {
-  const result = await Solution.aggregate([
-    { $match: { userId: new mongoose.Types.ObjectId(userId), isAccepted: true } },
-    { $group: { _id: '$problemId' } },
-    {
-      $lookup: {
-        from: 'problems',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'problem',
-      },
-    },
-    { $unwind: '$problem' },
-    {
-      $group: {
-        _id: '$problem.difficulty',
-        count: { $sum: 1 },
-      },
-    },
+  const completedIds = await getCompletedProblemIds(userId);
+
+  if (completedIds.length === 0) {
+    return { Easy: 0, Medium: 0, Hard: 0 };
+  }
+
+  const result = await Problem.aggregate([
+    { $match: { _id: { $in: completedIds }, isActive: true } },
+    { $group: { _id: '$difficulty', count: { $sum: 1 } } },
   ]);
 
   const distribution = { Easy: 0, Medium: 0, Hard: 0 };
@@ -85,10 +78,28 @@ const getDifficultyDistribution = async (userId) => {
 
 /**
  * Topic distribution + average confidence.
+ * 'solved' count uses the completion union (submitted + manual).
+ * 'avgConfidence' is based only on actual Solution records (genuine data).
  */
 const getTopicStats = async (userId) => {
-  return Solution.aggregate([
-    { $match: { userId: new mongoose.Types.ObjectId(userId), isAccepted: true } },
+  const oid = new mongoose.Types.ObjectId(userId);
+  const completedIds = await getCompletedProblemIds(userId);
+
+  // Completed count per topic (union-based)
+  const topicCounts = {};
+  if (completedIds.length > 0) {
+    const countResult = await Problem.aggregate([
+      { $match: { _id: { $in: completedIds }, isActive: true } },
+      { $group: { _id: '$topic', solved: { $sum: 1 } } },
+    ]);
+    for (const r of countResult) {
+      topicCounts[r._id] = r.solved;
+    }
+  }
+
+  // Average confidence per topic from actual submissions only
+  const confidenceResult = await Solution.aggregate([
+    { $match: { userId: oid, isAccepted: true } },
     {
       $lookup: {
         from: 'problems',
@@ -107,34 +118,46 @@ const getTopicStats = async (userId) => {
     {
       $group: {
         _id: '$_id.topic',
-        solved: { $sum: 1 },
         avgConfidence: { $avg: '$latestConfidence' },
       },
     },
-    { $sort: { solved: -1 } },
   ]);
+
+  const confidenceMap = {};
+  for (const r of confidenceResult) {
+    confidenceMap[r._id] = r.avgConfidence;
+  }
+
+  // Merge: all topics from completedIds get a row; avgConfidence from submissions
+  const allTopics = new Set([...Object.keys(topicCounts), ...Object.keys(confidenceMap)]);
+  const merged = [];
+  for (const topic of allTopics) {
+    merged.push({
+      _id: topic,
+      solved: topicCounts[topic] || 0,
+      avgConfidence: confidenceMap[topic] || null,
+    });
+  }
+
+  merged.sort((a, b) => b.solved - a.solved);
+  return merged;
 };
 
 /**
  * Pattern distribution.
+ * Uses the completion union (submitted + manual) for problem counts.
  */
 const getPatternStats = async (userId) => {
-  return Solution.aggregate([
-    { $match: { userId: new mongoose.Types.ObjectId(userId), isAccepted: true } },
-    { $group: { _id: '$problemId' } },
-    {
-      $lookup: {
-        from: 'problems',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'problem',
-      },
-    },
-    { $unwind: '$problem' },
-    { $unwind: '$problem.patterns' },
+  const completedIds = await getCompletedProblemIds(userId);
+
+  if (completedIds.length === 0) return [];
+
+  return Problem.aggregate([
+    { $match: { _id: { $in: completedIds }, isActive: true } },
+    { $unwind: '$patterns' },
     {
       $group: {
-        _id: '$problem.patterns',
+        _id: '$patterns',
         count: { $sum: 1 },
       },
     },

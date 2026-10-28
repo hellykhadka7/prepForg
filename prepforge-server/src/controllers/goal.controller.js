@@ -1,8 +1,9 @@
 const Goal = require('../models/Goal.model');
-const Solution = require('../models/Solution.model');
+const Problem = require('../models/Problem.model');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const { getUTCToday, isWeekend } = require('../utils/dateUtils');
+const { getCompletedTodayProblemIds } = require('../services/completion.service');
 const mongoose = require('mongoose');
 
 /**
@@ -54,36 +55,21 @@ const getProgress = asyncHandler(async (req, res) => {
     });
   }
 
-  // Count today's first-solves by difficulty
-  const todaysSolutions = await Solution.aggregate([
-    {
-      $match: {
-        userId: oid,
-        isAccepted: true,
-        isFirstSolve: true,
-        submittedAt: { $gte: today },
-      },
-    },
-    {
-      $lookup: {
-        from: 'problems',
-        localField: 'problemId',
-        foreignField: '_id',
-        as: 'problem',
-      },
-    },
-    { $unwind: '$problem' },
-    {
-      $group: {
-        _id: '$problem.difficulty',
-        count: { $sum: 1 },
-      },
-    },
-  ]);
+  // Count today's unique completed problems by difficulty (first-solves + manual completions)
+  const todayCompletedIds = await getCompletedTodayProblemIds(userId, today);
+
+  const todayCompletedProblems = todayCompletedIds.length > 0
+    ? await Problem.find(
+        { _id: { $in: todayCompletedIds }, isActive: true },
+        { difficulty: 1 }
+      ).lean()
+    : [];
 
   const todaySolved = { Easy: 0, Medium: 0, Hard: 0 };
-  for (const s of todaysSolutions) {
-    todaySolved[s._id] = s.count;
+  for (const p of todayCompletedProblems) {
+    if (p.difficulty === 'Easy') todaySolved.Easy++;
+    else if (p.difficulty === 'Medium') todaySolved.Medium++;
+    else if (p.difficulty === 'Hard') todaySolved.Hard++;
   }
 
   const weekendExtra = goals.weekendBonusEnabled && isWeekend() ? goals.weekendBonus : 0;

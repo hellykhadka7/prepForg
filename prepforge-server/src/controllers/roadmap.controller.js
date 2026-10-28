@@ -3,6 +3,7 @@ const Solution = require('../models/Solution.model');
 const Problem = require('../models/Problem.model');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../middleware/asyncHandler');
+const { getCompletedProblemIds } = require('../services/completion.service');
 
 /**
  * GET /api/v1/roadmaps
@@ -16,10 +17,9 @@ const getAllRoadmaps = asyncHandler(async (req, res) => {
     Roadmap.find({ createdBy: userId, isSystem: false }).lean(),
   ]);
 
-  // Compute progress for each roadmap
-  const solvedIds = new Set(
-    (await Solution.distinct('problemId', { userId, isAccepted: true })).map((id) => id.toString())
-  );
+  // Compute progress for each roadmap using union of submissions + manual completions
+  const completedIds = await getCompletedProblemIds(userId);
+  const solvedIds = new Set(completedIds.map((id) => id.toString()));
 
   const enrichRoadmap = (roadmap) => {
     const total = roadmap.problemIds.length;
@@ -67,10 +67,9 @@ const getRoadmap = asyncHandler(async (req, res) => {
 
   if (!roadmap) return ApiResponse.notFound(res, 'Roadmap not found.');
 
-  // Compute per-problem solve status
-  const solvedIds = new Set(
-    (await Solution.distinct('problemId', { userId: req.user._id, isAccepted: true })).map((id) => id.toString())
-  );
+  // Compute per-problem completion status using union of submissions + manual completions
+  const completedIds = await getCompletedProblemIds(req.user._id);
+  const solvedIds = new Set(completedIds.map((id) => id.toString()));
 
   const problems = roadmap.problemIds.map((p) => ({
     ...p,
