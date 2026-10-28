@@ -73,6 +73,12 @@ export interface LoginPayload {
 
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
+/**
+ * Per-user tracking status — stored in UserProblemStatus collection.
+ * Absence of a record on the backend means 'not_started'.
+ */
+export type ProblemStatus = 'not_started' | 'completed' | 'on_hold' | 'skipped';
+
 export type Pattern =
   | 'Arrays'
   | 'HashMap'
@@ -102,9 +108,18 @@ export interface Problem {
   topic: string;
   week: number;
   orderIndex: number;
+  /** URL for the original problem source (LeetCode URL for seeded problems) */
   leetcodeUrl: string;
+  /** URL field used for custom problems; may also be populated for seeded ones */
+  sourceUrl: string;
+  /** Optional description / problem statement */
+  description: string;
   patterns: Pattern[];
   isActive: boolean;
+  /** True if this problem was created by the current user */
+  isCustom: boolean;
+  /** userId of the creator — null for seeded problems */
+  createdBy: string | null;
   createdAt: string;
 }
 
@@ -114,6 +129,8 @@ export interface ProblemWithStatus extends Problem {
   bookmarked: boolean;
   revisionDue: boolean;
   latestConfidence: number | null;
+  /** Per-user tracking status. Default is 'not_started' when no record exists. */
+  status: ProblemStatus;
 }
 
 export interface ProblemListResponse {
@@ -127,10 +144,32 @@ export interface ProblemFilters {
   topic?: string;
   pattern?: string;
   difficulty?: Difficulty;
-  status?: 'solved' | 'unsolved';
+  /**
+   * 'solved' and 'unsolved' filter by Solution records.
+   * The four ProblemStatus values filter by UserProblemStatus.
+   */
+  status?: 'solved' | 'unsolved' | ProblemStatus;
   bookmarked?: string;
   revisionDue?: string;
   q?: string;
+}
+
+/** Payload for creating a custom problem. */
+export interface CreateCustomProblemPayload {
+  title: string;
+  difficulty: Difficulty;
+  topic?: string;
+  patterns?: Pattern[];
+  sourceUrl?: string;
+  description?: string;
+}
+
+/** Payload for updating a custom problem (all fields optional). */
+export type UpdateCustomProblemPayload = Partial<CreateCustomProblemPayload>;
+
+/** Response shape returned by setMyStatus. */
+export interface SetStatusResponse {
+  status: ProblemStatus;
 }
 
 // ── Solution ───────────────────────────────────────────────

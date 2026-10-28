@@ -1,69 +1,125 @@
+const { z } = require('zod');
 const Problem = require('../models/Problem.model');
 const Solution = require('../models/Solution.model');
 const Bookmark = require('../models/Bookmark.model');
 const Revision = require('../models/Revision.model');
+const UserProblemStatus = require('../models/UserProblemStatus.model');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../middleware/asyncHandler');
-const { XP_VALUES } = require('../config/constants');
+const { XP_VALUES, PATTERNS, DIFFICULTIES } = require('../config/constants');
 const { getUTCToday } = require('../utils/dateUtils');
+
+// ──────────────────────────────────────────────────────────
+//  Validation
+// ──────────────────────────────────────────────────────────
+
+const createProblemSchema = z.object({
+  title: z.string().min(1, 'Title is required').trim(),
+  difficulty: z.enum(DIFFICULTIES),
+  topic: z.string().trim().default(''),
+  patterns: z.array(z.string()).default([]),
+  sourceUrl: z.string().trim().default(''),
+  description: z.string().default(''),
+});
+
+const updateProblemSchema = createProblemSchema.partial();
+
+// ──────────────────────────────────────────────────────────
+//  Helpers
+// ──────────────────────────────────────────────────────────
+
+/**
+ * Build a map of problemId → user status from UserProblemStatus.
+ * Absence of a record means 'not_started'.
+ */
+const buildStatusMap = async (userId, problemIds) => {
+  const statuses = await UserProblemStatus.find({
+    userId,
+    problemId: { $in: problemIds },
+  }).lean();
+
+  const map = {};
+  for (const s of statuses) {
+    map[s.problemId.toString()] = s.status;
+  }
+  return map;
+};
+
+// ──────────────────────────────────────────────────────────
+//  Controllers
+// ──────────────────────────────────────────────────────────
 
 /**
  * GET /api/v1/problems
- * List all problems with per-user solve/bookmark/revision status.
- * Preserves Week → Difficulty → orderIndex display order.
- * Supports filters: week, topic, pattern, difficulty, status, bookmarked, revisionDue, q
+ * List all problems (seeded + user's custom) with per-user
+ * solve/bookmark/revision/status data.
+ * Filters: week, topic, pattern, difficulty, status, bookmarked, revisionDue, q
  */
 const getProblems = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { week, topic, pattern, difficulty, status, bookmarked, revisionDue, q } = req.query;
 
-  // Build problem filter
-  const filter = { isActive: true };
+  // Build problem filter — include seeded (isCustom not true) + user's own custom
+  const filter = {
+    isActive: true,
+    $or: [
+      { isCustom: { $ne: true } },
+      { isCustom: true, createdBy: userId },
+    ],
+  };
+
   if (week) filter.week = parseInt(week, 10);
   if (topic) filter.topic = topic;
   if (pattern) filter.patterns = pattern;
   if (difficulty) filter.difficulty = difficulty;
   if (q) {
-    filter.$or = [
-      { title: { $regex: q, $options: 'i' } },
-      { topic: { $regex: q, $options: 'i' } },
-      { patterns: { $regex: q, $options: 'i' } },
+    filter.$and = [
+      {
+        $or: [
+          { title: { $regex: q, $options: 'i' } },
+          { topic: { $regex: q, $options: 'i' } },
+          { patterns: { $regex: q, $options: 'i' } },
+        ],
+      },
     ];
+    // Remove the top-level $or if $and is being used to avoid conflicts
+    if (filter.$or) {
+      filter.$and.push({ $or: filter.$or });
+      delete filter.$or;
+    }
   }
 
-  // Fetch problems in correct display order
+  // Fetch problems ordered: seeded first (week→orderIndex), then custom by createdAt
   const problems = await Problem.find(filter)
-    .sort({ week: 1, orderIndex: 1 })
+    .sort({ isCustom: 1, week: 1, orderIndex: 1, createdAt: -1 })
     .lean();
 
-  // Get user's solved problem IDs
-  const solvedProblemIds = new Set(
-    (
-      await Solution.distinct('problemId', { userId, isAccepted: true })
-    ).map((id) => id.toString())
-  );
+  const problemIds = problems.map((p) => p._id);
 
-  // Get user's bookmarked problem IDs
-  const bookmarkedIds = new Set(
-    (await Bookmark.distinct('problemId', { userId })).map((id) => id.toString())
-  );
-
-  // Get due revision problem IDs
-  const today = getUTCToday();
-  const dueRevisionIds = new Set(
-    (
-      await Revision.distinct('problemId', {
+  // Parallel data fetches
+  const [solvedProblemIds, bookmarkedIds, dueRevisionIds, statusMap] = await Promise.all([
+    Solution.distinct('problemId', { userId, isAccepted: true }).then(
+      (ids) => new Set(ids.map((id) => id.toString()))
+    ),
+    Bookmark.distinct('problemId', { userId }).then(
+      (ids) => new Set(ids.map((id) => id.toString()))
+    ),
+    (async () => {
+      const today = getUTCToday();
+      const ids = await Revision.distinct('problemId', {
         userId,
         $or: [
           { revision1Done: false, revision1Date: { $lte: today } },
           { revision2Done: false, revision2Date: { $lte: today } },
           { revision3Done: false, revision3Date: { $lte: today } },
         ],
-      })
-    ).map((id) => id.toString())
-  );
+      });
+      return new Set(ids.map((id) => id.toString()));
+    })(),
+    buildStatusMap(userId, problemIds),
+  ]);
 
-  // Get latest confidence for solved problems
+  // Latest confidence per solved problem
   const latestConfidences = await Solution.aggregate([
     { $match: { userId: req.user._id, isAccepted: true } },
     { $sort: { submittedAt: -1 } },
@@ -84,14 +140,17 @@ const getProblems = asyncHandler(async (req, res) => {
       bookmarked: bookmarkedIds.has(pid),
       revisionDue: dueRevisionIds.has(pid),
       latestConfidence: confidenceMap[pid] || null,
+      status: statusMap[pid] || 'not_started',
     };
   });
 
-  // Apply user-specific filters
+  // Apply user-specific filters (status, bookmarked, revisionDue)
   if (status === 'solved') {
     enriched = enriched.filter((p) => p.solved);
   } else if (status === 'unsolved') {
     enriched = enriched.filter((p) => !p.solved);
+  } else if (['not_started', 'completed', 'on_hold', 'skipped'].includes(status)) {
+    enriched = enriched.filter((p) => p.status === status);
   }
 
   if (bookmarked === 'true') {
@@ -104,7 +163,10 @@ const getProblems = asyncHandler(async (req, res) => {
 
   return ApiResponse.success(res, {
     problems: enriched,
-    total: await Problem.countDocuments({ isActive: true }),
+    total: await Problem.countDocuments({
+      isActive: true,
+      $or: [{ isCustom: { $ne: true } }, { isCustom: true, createdBy: userId }],
+    }),
     filtered: enriched.length,
   });
 });
@@ -113,21 +175,30 @@ const getProblems = asyncHandler(async (req, res) => {
  * GET /api/v1/problems/:id
  */
 const getProblem = asyncHandler(async (req, res) => {
-  const problem = await Problem.findById(req.params.id).lean();
+  const userId = req.user._id;
+
+  // Allow access to seeded problems OR own custom problems
+  const problem = await Problem.findOne({
+    _id: req.params.id,
+    isActive: true,
+    $or: [{ isCustom: { $ne: true } }, { isCustom: true, createdBy: userId }],
+  }).lean();
+
   if (!problem) return ApiResponse.notFound(res, 'Problem not found.');
 
-  // Attach user-specific status
-  const userId = req.user._id;
-  const pid = problem._id.toString();
-
-  const solvedCount = await Solution.countDocuments({ userId, problemId: problem._id, isAccepted: true });
-  const bookmark = await Bookmark.findOne({ userId, problemId: problem._id });
+  const pid = problem._id;
+  const [solvedCount, bookmark, statusDoc] = await Promise.all([
+    Solution.countDocuments({ userId, problemId: pid, isAccepted: true }),
+    Bookmark.findOne({ userId, problemId: pid }),
+    UserProblemStatus.findOne({ userId, problemId: pid }),
+  ]);
 
   return ApiResponse.success(res, {
     ...problem,
     xpReward: XP_VALUES[problem.difficulty]?.firstSolve || 0,
     solved: solvedCount > 0,
     bookmarked: !!bookmark,
+    status: statusDoc?.status || 'not_started',
   });
 });
 
@@ -138,11 +209,14 @@ const getProblemStatus = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const problemId = req.params.id;
 
-  const solvedCount = await Solution.countDocuments({ userId, problemId, isAccepted: true });
-  const bookmark = await Bookmark.findOne({ userId, problemId });
-  const revision = await Revision.findOne({ userId, problemId });
-  const today = getUTCToday();
+  const [solvedCount, bookmark, revision, statusDoc] = await Promise.all([
+    Solution.countDocuments({ userId, problemId, isAccepted: true }),
+    Bookmark.findOne({ userId, problemId }),
+    Revision.findOne({ userId, problemId }),
+    UserProblemStatus.findOne({ userId, problemId }),
+  ]);
 
+  const today = getUTCToday();
   let revisionDue = false;
   if (revision) {
     revisionDue =
@@ -155,7 +229,44 @@ const getProblemStatus = asyncHandler(async (req, res) => {
     solved: solvedCount > 0,
     bookmarked: !!bookmark,
     revisionDue,
+    status: statusDoc?.status || 'not_started',
   });
+});
+
+/**
+ * PATCH /api/v1/problems/:id/mystatus
+ * Set the user's personal tracking status for a problem.
+ * Valid values: not_started | completed | on_hold | skipped
+ * Does NOT touch Solution, Revision, or Activity records.
+ */
+const setMyStatus = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const problemId = req.params.id;
+  const { status } = req.body;
+
+  const validStatuses = ['not_started', 'completed', 'on_hold', 'skipped'];
+  if (!validStatuses.includes(status)) {
+    return ApiResponse.badRequest(
+      res,
+      `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+    );
+  }
+
+  // Verify problem is accessible to this user
+  const problem = await Problem.findOne({
+    _id: problemId,
+    isActive: true,
+    $or: [{ isCustom: { $ne: true } }, { isCustom: true, createdBy: userId }],
+  });
+  if (!problem) return ApiResponse.notFound(res, 'Problem not found.');
+
+  const statusDoc = await UserProblemStatus.findOneAndUpdate(
+    { userId, problemId },
+    { status },
+    { upsert: true, new: true }
+  );
+
+  return ApiResponse.success(res, { status: statusDoc.status }, 'Status updated.');
 });
 
 /**
@@ -176,4 +287,143 @@ const toggleBookmark = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { getProblems, getProblem, getProblemStatus, toggleBookmark };
+// ──────────────────────────────────────────────────────────
+//  Custom Problem CRUD
+// ──────────────────────────────────────────────────────────
+
+/**
+ * POST /api/v1/problems
+ * Create a custom (user-owned) problem.
+ */
+const createCustomProblem = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const parsed = createProblemSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const errors = parsed.error.errors.map((e) => ({
+      field: e.path.join('.'),
+      message: e.message,
+    }));
+    return ApiResponse.badRequest(res, 'Validation failed', errors);
+  }
+
+  const { title, difficulty, topic, patterns, sourceUrl, description } = parsed.data;
+
+  // Prevent duplicate title within user's custom problems
+  const duplicate = await Problem.findOne({
+    title: { $regex: `^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
+    isCustom: true,
+    createdBy: userId,
+    isActive: true,
+  });
+  if (duplicate) {
+    return ApiResponse.badRequest(res, 'You already have a custom problem with this title.');
+  }
+
+  const problem = await Problem.create({
+    title,
+    difficulty,
+    topic,
+    patterns,
+    sourceUrl,
+    description,
+    isCustom: true,
+    createdBy: userId,
+    week: 0,
+    orderIndex: 0,
+    isActive: true,
+  });
+
+  return ApiResponse.created(res, { problem }, 'Custom problem created.');
+});
+
+/**
+ * PATCH /api/v1/problems/:id
+ * Update a user-owned custom problem (ownership-checked).
+ */
+const updateCustomProblem = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  // Only owner can edit their custom problems
+  const problem = await Problem.findOne({
+    _id: req.params.id,
+    isCustom: true,
+    createdBy: userId,
+    isActive: true,
+  });
+  if (!problem) {
+    return ApiResponse.notFound(
+      res,
+      'Custom problem not found or you are not the owner.'
+    );
+  }
+
+  const parsed = updateProblemSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const errors = parsed.error.errors.map((e) => ({
+      field: e.path.join('.'),
+      message: e.message,
+    }));
+    return ApiResponse.badRequest(res, 'Validation failed', errors);
+  }
+
+  const { title, difficulty, topic, patterns, sourceUrl, description } = parsed.data;
+
+  if (title !== undefined) problem.title = title;
+  if (difficulty !== undefined) problem.difficulty = difficulty;
+  if (topic !== undefined) problem.topic = topic;
+  if (patterns !== undefined) problem.patterns = patterns;
+  if (sourceUrl !== undefined) problem.sourceUrl = sourceUrl;
+  if (description !== undefined) problem.description = description;
+
+  await problem.save();
+
+  return ApiResponse.success(res, { problem }, 'Custom problem updated.');
+});
+
+/**
+ * DELETE /api/v1/problems/:id
+ * Soft-delete a user-owned custom problem (ownership-checked).
+ *
+ * SAFETY: Sets isActive=false only. Does NOT delete Solution, Note,
+ * Bookmark, Revision, or Activity records associated with this problem.
+ * Historical data is preserved; the problem simply disappears from listings.
+ */
+const deleteCustomProblem = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const problem = await Problem.findOne({
+    _id: req.params.id,
+    isCustom: true,
+    createdBy: userId,
+    isActive: true,
+  });
+
+  if (!problem) {
+    return ApiResponse.notFound(
+      res,
+      'Custom problem not found or you are not the owner.'
+    );
+  }
+
+  // Soft delete — preserve all associated Solution/Note/Revision/Bookmark records
+  problem.isActive = false;
+  await problem.save();
+
+  return ApiResponse.success(
+    res,
+    { deleted: true, problemId: problem._id },
+    'Custom problem removed. Associated solutions, notes, and revisions are preserved.'
+  );
+});
+
+module.exports = {
+  getProblems,
+  getProblem,
+  getProblemStatus,
+  setMyStatus,
+  toggleBookmark,
+  createCustomProblem,
+  updateCustomProblem,
+  deleteCustomProblem,
+};
