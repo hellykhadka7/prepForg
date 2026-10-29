@@ -24,6 +24,13 @@ const Roadmap = require('../src/models/Roadmap.model');
 const { getCompletedProblemIds, getCompletedTodayProblemIds } = require('../src/services/completion.service');
 const { getDifficultyDistribution, getTopicStats, getPatternStats } = require('../src/services/analytics.service');
 const { getUTCToday, addDays } = require('../src/utils/dateUtils');
+const {
+  validateTargetProblems,
+  buildRollbackStatusDoc,
+  STATUS_OVERRIDES,
+  CANONICAL_ID,
+  DUPLICATE_ID,
+} = require('../src/scripts/migrate-two-sum');
 
 async function runTests() {
   await mongoose.connect(MONGODB_URI);
@@ -337,6 +344,60 @@ async function runTests() {
     const countOfProb6 = afterSolutionToo.filter((id) => id.toString() === prob6._id.toString()).length;
     assert.strictEqual(countOfProb6, 1, 'Dual completion today (status + submission) must be counted EXACTLY ONCE');
     console.log('✔ Test 7 passed.');
+
+    // ──────────────────────────────────────────────────────
+    // TEST 8: Two Sum Migration Pre-state Guards and Rollback Helpers
+    // ──────────────────────────────────────────────────────
+    console.log('Testing Test 8: Two Sum migration pre-state guards and rollback helper...');
+
+    const validP1 = { _id: CANONICAL_ID, title: 'Two Sum', isActive: true, topic: 'Array' };
+    const validP2 = { _id: DUPLICATE_ID, title: '  two sum  ', isActive: true, topic: 'Arrays & Hashing' };
+
+    // 1. Valid inputs pass
+    assert.doesNotThrow(() => validateTargetProblems(validP1, validP2));
+
+    // 2. Missing problems throw
+    assert.throws(() => validateTargetProblems(null, validP2), /Canonical problem .* not found/);
+    assert.throws(() => validateTargetProblems(validP1, null), /Duplicate problem .* not found/);
+
+    // 3. Title mismatch throws
+    assert.throws(() => validateTargetProblems({ ...validP1, title: 'Three Sum' }, validP2), /Canonical problem title expected "Two Sum"/);
+    assert.throws(() => validateTargetProblems(validP1, { ...validP2, title: 'Other' }), /Duplicate problem title expected "Two Sum"/);
+
+    // 4. Inactive records throw
+    assert.throws(() => validateTargetProblems({ ...validP1, isActive: false }, validP2), /Canonical problem .* is not active/);
+    assert.throws(() => validateTargetProblems(validP1, { ...validP2, isActive: false }), /Duplicate problem .* is already inactive/);
+
+    // 5. Rollback status document reconstruction preserves userId, problemId, status, timestamps, and __v
+    const mockSnapshotDoc = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      userId: new mongoose.Types.ObjectId().toString(),
+      problemId: DUPLICATE_ID.toString(),
+      status: 'completed',
+      createdAt: '2026-03-20T10:00:00.000Z',
+      updatedAt: '2026-03-21T12:00:00.000Z',
+      __v: 2,
+    };
+
+    const restoredDoc = buildRollbackStatusDoc(mockSnapshotDoc);
+    assert.ok(restoredDoc.userId instanceof mongoose.Types.ObjectId, 'userId must be restored as an ObjectId');
+    assert.strictEqual(restoredDoc.userId.toString(), mockSnapshotDoc.userId);
+    assert.ok(restoredDoc.problemId instanceof mongoose.Types.ObjectId, 'problemId must be restored as an ObjectId');
+    assert.strictEqual(restoredDoc.problemId.toString(), mockSnapshotDoc.problemId);
+    assert.strictEqual(restoredDoc.status, 'completed');
+    assert.ok(restoredDoc.createdAt instanceof Date, 'createdAt must be restored as a Date');
+    assert.strictEqual(restoredDoc.createdAt.toISOString(), mockSnapshotDoc.createdAt);
+    assert.ok(restoredDoc.updatedAt instanceof Date, 'updatedAt must be restored as a Date');
+    assert.strictEqual(restoredDoc.updatedAt.toISOString(), mockSnapshotDoc.updatedAt);
+    assert.strictEqual(restoredDoc.__v, 2);
+
+    // 6. STATUS_OVERRIDES: hellykhadka is set to 'not_started', no other users overridden
+    const HELLYKHADKA_ID = '6ab657dab93e7d35cf066f0c';
+    assert.strictEqual(STATUS_OVERRIDES[HELLYKHADKA_ID], 'not_started', 'hellykhadka must be overridden to not_started');
+    // A random user ID not in overrides should return undefined (no override)
+    assert.strictEqual(STATUS_OVERRIDES[new mongoose.Types.ObjectId().toString()], undefined, 'Unlisted users must not have overrides');
+
+    console.log('✔ Test 8 passed.');
 
     console.log('\n========================================');
     console.log('ALL TARGETED INTEGRATION TESTS PASSED!');
