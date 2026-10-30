@@ -15,21 +15,30 @@ const problemSchema = new mongoose.Schema(
     },
     topic: {
       type: String,
-      required: [true, 'Topic is required'],
       trim: true,
+      default: '',
     },
     week: {
       type: Number,
-      required: [true, 'Week number is required'],
-      min: 1,
+      min: 0,
+      default: 0,
     },
     orderIndex: {
       type: Number,
-      required: [true, 'Order index is required'],
+      default: 0,
     },
     leetcodeUrl: {
       type: String,
       trim: true,
+      default: '',
+    },
+    sourceUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    description: {
+      type: String,
       default: '',
     },
     patterns: {
@@ -40,6 +49,17 @@ const problemSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    // Custom problem fields
+    isCustom: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
   },
   {

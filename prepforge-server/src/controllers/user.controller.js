@@ -11,6 +11,7 @@ const { getNextLevelXP, getLevelProgress } = require('../utils/levelUtils');
 const { getUTCToday, isWeekend } = require('../utils/dateUtils');
 const { getDueRevisions, getUpcomingRevisions } = require('../services/revision.service');
 const { generateDailyChallenge } = require('../services/dailyChallenge.service');
+const { getCompletedProblemIds, getCompletedTodayProblemIds } = require('../services/completion.service');
 const mongoose = require('mongoose');
 
 /**
@@ -54,69 +55,52 @@ const getDashboard = asyncHandler(async (req, res) => {
   const nextLevelXP = getNextLevelXP(user.currentLevel);
   const levelProgress = getLevelProgress(user.totalXP, user.currentLevel);
 
-  // ── Solved counts ──
-  const solvedAgg = await Solution.aggregate([
-    { $match: { userId: oid, isAccepted: true } },
-    { $group: { _id: '$problemId' } },
-    {
-      $lookup: {
-        from: 'problems',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'problem',
-      },
-    },
-    { $unwind: '$problem' },
-    {
-      $group: {
-        _id: null,
-        total: { $sum: 1 },
-        easy: { $sum: { $cond: [{ $eq: ['$problem.difficulty', 'Easy'] }, 1, 0] } },
-        medium: { $sum: { $cond: [{ $eq: ['$problem.difficulty', 'Medium'] }, 1, 0] } },
-        hard: { $sum: { $cond: [{ $eq: ['$problem.difficulty', 'Hard'] }, 1, 0] } },
-      },
-    },
-  ]);
+  // ── Completed counts (union of accepted Solutions + manual 'completed' status) ──
+  // A problem counts as "completed" if the user has an accepted Solution OR
+  // has manually set UserProblemStatus.status = 'completed'.
+  // No fake Solution or Activity records are created for manual completions.
+  const completedIds = await getCompletedProblemIds(userId);
 
-  const solved = solvedAgg.length > 0
-    ? solvedAgg[0]
-    : { total: 0, easy: 0, medium: 0, hard: 0 };
-  delete solved._id;
+  // Look up difficulties for all completed problems
+  const completedProblems = completedIds.length > 0
+    ? await Problem.find(
+        { _id: { $in: completedIds }, isActive: true },
+        { difficulty: 1 }
+      ).lean()
+    : [];
 
-  const totalProblems = await Problem.countDocuments({ isActive: true });
-  solved.remaining = totalProblems - solved.total;
+  const solved = { total: completedProblems.length, easy: 0, medium: 0, hard: 0 };
+  for (const p of completedProblems) {
+    if (p.difficulty === 'Easy') solved.easy++;
+    else if (p.difficulty === 'Medium') solved.medium++;
+    else if (p.difficulty === 'Hard') solved.hard++;
+  }
+
+  // Denominator: seeded problems + current user's own custom problems only
+  const totalProblems = await Problem.countDocuments({
+    isActive: true,
+    $or: [{ isCustom: { $ne: true } }, { isCustom: true, createdBy: userId }],
+  });
+  solved.remaining = Math.max(0, totalProblems - solved.total);
 
   // ── Daily Goal Progress ──
+  // Uses union of first-solves today + problems marked 'completed' today.
+  // Deduplicates problems so solving both ways today counts once.
   const goals = await Goal.findOne({ userId }).lean();
-  const todaysSolutions = await Solution.aggregate([
-    {
-      $match: {
-        userId: oid,
-        isAccepted: true,
-        isFirstSolve: true,
-        submittedAt: { $gte: today },
-      },
-    },
-    {
-      $lookup: {
-        from: 'problems',
-        localField: 'problemId',
-        foreignField: '_id',
-        as: 'problem',
-      },
-    },
-    { $unwind: '$problem' },
-    {
-      $group: {
-        _id: '$problem.difficulty',
-        count: { $sum: 1 },
-      },
-    },
-  ]);
+  const todayCompletedIds = await getCompletedTodayProblemIds(userId, today);
+
+  const todayCompletedProblems = todayCompletedIds.length > 0
+    ? await Problem.find(
+        { _id: { $in: todayCompletedIds }, isActive: true },
+        { difficulty: 1 }
+      ).lean()
+    : [];
 
   const todaySolved = { Easy: 0, Medium: 0, Hard: 0 };
-  for (const s of todaysSolutions) {
-    todaySolved[s._id] = s.count;
+  for (const p of todayCompletedProblems) {
+    if (p.difficulty === 'Easy') todaySolved.Easy++;
+    else if (p.difficulty === 'Medium') todaySolved.Medium++;
+    else if (p.difficulty === 'Hard') todaySolved.Hard++;
   }
 
   const weekendExtra = goals && goals.weekendBonusEnabled && isWeekend() ? goals.weekendBonus : 0;
