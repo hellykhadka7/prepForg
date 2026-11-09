@@ -11,9 +11,9 @@ interface CardProps {
 
 const paddingStyles = {
   none: '',
-  sm: 'p-3',
-  md: 'p-4',
-  lg: 'p-6',
+  sm:  'p-3',
+  md:  'p-4',
+  lg:  'p-5',
 };
 
 export default function Card({ children, className, padding = 'md', hover = false, onClick }: CardProps) {
@@ -22,13 +22,14 @@ export default function Card({ children, className, padding = 'md', hover = fals
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
       className={clsx(
-        'rounded-xl border',
+        'rounded-[10px] border',
         'bg-[var(--card-bg)] border-[var(--card-border)]',
         'shadow-[var(--card-shadow)]',
-        'transition-all duration-200',
-        hover && 'hover:border-[var(--accent-primary)] hover:shadow-lg cursor-pointer',
+        'transition-colors duration-150',
+        hover && 'hover:border-[var(--accent-primary)]/40 cursor-pointer',
+        onClick && 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)]',
         paddingStyles[padding],
         className
       )}

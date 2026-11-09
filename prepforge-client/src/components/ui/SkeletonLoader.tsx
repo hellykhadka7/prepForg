@@ -7,14 +7,20 @@ interface SkeletonLoaderProps {
   height?: string;
 }
 
-export default function SkeletonLoader({ className, variant = 'text', width, height }: SkeletonLoaderProps) {
+export default function SkeletonLoader({
+  className,
+  variant = 'text',
+  width,
+  height,
+}: SkeletonLoaderProps) {
   return (
     <div
+      aria-hidden="true"
       className={clsx(
-        'animate-pulse bg-[var(--bg-tertiary)]',
-        variant === 'text' && 'h-4 rounded',
-        variant === 'circular' && 'rounded-full',
-        variant === 'rectangular' && 'rounded-lg',
+        'animate-pulse bg-[var(--bg-elevated)]',
+        variant === 'text'        && 'h-4 rounded',
+        variant === 'circular'    && 'rounded-full',
+        variant === 'rectangular' && 'rounded-[10px]',
         className
       )}
       style={{ width, height }}
@@ -24,7 +30,7 @@ export default function SkeletonLoader({ className, variant = 'text', width, hei
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] p-4 space-y-3">
+    <div className="rounded-[10px] border border-[var(--card-border)] bg-[var(--card-bg)] p-4 space-y-3" aria-hidden="true">
       <SkeletonLoader variant="text" width="60%" />
       <SkeletonLoader variant="text" width="80%" />
       <SkeletonLoader variant="text" width="40%" />

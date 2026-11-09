@@ -77,7 +77,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       />
 
       {/* Palette */}
-      <div className="relative w-full max-w-2xl bg-[var(--bg-secondary)] rounded-2xl shadow-2xl border border-[var(--border-primary)] overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-xl bg-[var(--bg-elevated)] rounded-xl shadow-2xl border border-[var(--border-primary)] overflow-hidden flex flex-col max-h-[80vh] animate-fade-in">
         
         {/* Search Input */}
         <div className="flex items-center px-4 py-4 border-b border-[var(--border-primary)]">
@@ -209,7 +209,7 @@ function ResultItem({ icon, title, subtitle, onClick }: { icon: React.ReactNode;
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors group text-left"
+      className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[var(--bg-hover)] transition-colors group text-left"
     >
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--bg-primary)] flex items-center justify-center border border-[var(--border-primary)] group-hover:border-[var(--border-hover)]">
         {icon}
