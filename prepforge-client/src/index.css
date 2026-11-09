@@ -1,12 +1,106 @@
 @import "tailwindcss";
 
 /* ──────────────────────────────────────────────────────────
-   Theme System — 4 Themes via CSS Custom Properties
-   VS Code Dark | GitHub Dark | GitHub Light | Dracula
+   Theme System — 5 Themes via CSS Custom Properties
+   PrepForge Dark (default) | VS Code Dark | GitHub Dark | GitHub Light | Dracula
 ────────────────────────────────────────────────────────── */
 
-/* ── VS Code Dark (default) ───────────────────────────── */
-:root,
+/* ── PrepForge Dark (default — applied when no saved preference) ── */
+:root {
+  --bg-primary:    #0B0D12;
+  --bg-secondary:  #0F1118;
+  --bg-tertiary:   #141821;
+  --bg-elevated:   #1A1F2B;
+  --bg-hover:      #1E2434;
+  --bg-active:     #232B3E;
+  --bg-input:      #141821;
+
+  --border-primary:   #252B38;
+  --border-secondary: #1E2434;
+  --border-active:    #818CF8;
+
+  --text-primary:   #F1F3F9;
+  --text-secondary: #A1A8B8;
+  --text-tertiary:  #7E879C;  /* adjusted from #737C90 — WCAG AA 4.5:1 on all bg layers */
+  --text-inverse:   #0B0D12;
+
+  --accent-primary:         #818CF8;
+  --accent-primary-hover:   #929EFF;
+  --accent-primary-text:    #0B0D12;  /* dark text on indigo button — 6.52:1 contrast */
+  --accent-secondary:       #6366F1;
+  --accent-success:         #34D399;
+  --accent-warning:         #FBBF24;
+  --accent-error:           #FB7185;
+
+  --sidebar-bg:          #0F1118;
+  --sidebar-hover:       #1A1F2B;
+  --sidebar-active:      #232B3E;
+  --sidebar-text:        #7E879C;
+  --sidebar-text-active: #F1F3F9;
+  --sidebar-width:       240px;
+
+  --card-bg:     #141821;
+  --card-border: #252B38;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  --toast-bg: #1A1F2B;
+
+  --scrollbar-track: #0B0D12;
+  --scrollbar-thumb: #252B38;
+
+  --gradient-start: #818CF8;
+  --gradient-end:   #6366F1;
+}
+
+/* Same values explicitly on the data-theme attribute for returning users whose
+   preference is "prepforge-dark" (ThemeContext sets data-theme on hydration) */
+:root[data-theme="prepforge-dark"] {
+  --bg-primary:    #0B0D12;
+  --bg-secondary:  #0F1118;
+  --bg-tertiary:   #141821;
+  --bg-elevated:   #1A1F2B;
+  --bg-hover:      #1E2434;
+  --bg-active:     #232B3E;
+  --bg-input:      #141821;
+
+  --border-primary:   #252B38;
+  --border-secondary: #1E2434;
+  --border-active:    #818CF8;
+
+  --text-primary:   #F1F3F9;
+  --text-secondary: #A1A8B8;
+  --text-tertiary:  #7E879C;
+  --text-inverse:   #0B0D12;
+
+  --accent-primary:         #818CF8;
+  --accent-primary-hover:   #929EFF;
+  --accent-primary-text:    #0B0D12;
+  --accent-secondary:       #6366F1;
+  --accent-success:         #34D399;
+  --accent-warning:         #FBBF24;
+  --accent-error:           #FB7185;
+
+  --sidebar-bg:          #0F1118;
+  --sidebar-hover:       #1A1F2B;
+  --sidebar-active:      #232B3E;
+  --sidebar-text:        #7E879C;
+  --sidebar-text-active: #F1F3F9;
+  --sidebar-width:       240px;
+
+  --card-bg:     #141821;
+  --card-border: #252B38;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  --toast-bg: #1A1F2B;
+
+  --scrollbar-track: #0B0D12;
+  --scrollbar-thumb: #252B38;
+
+  --gradient-start: #818CF8;
+  --gradient-end:   #6366F1;
+}
+
+/* ── VS Code Dark ──────────────────────────────────────── */
 :root[data-theme="vscode-dark"] {
   --bg-primary: #1e1e1e;
   --bg-secondary: #252526;
@@ -27,6 +121,7 @@
 
   --accent-primary: #007acc;
   --accent-primary-hover: #1c8ad9;
+  --accent-primary-text: #ffffff;
   --accent-secondary: #3794ff;
   --accent-success: #4ec9b0;
   --accent-warning: #cca700;
@@ -73,6 +168,7 @@
 
   --accent-primary: #58a6ff;
   --accent-primary-hover: #79c0ff;
+  --accent-primary-text: #ffffff;
   --accent-secondary: #1f6feb;
   --accent-success: #3fb950;
   --accent-warning: #d29922;
@@ -83,10 +179,16 @@
   --sidebar-active: #21262d;
   --sidebar-text: #8b949e;
   --sidebar-text-active: #f0f6fc;
+  --sidebar-width: 260px;
 
   --card-bg: #161b22;
   --card-border: #30363d;
   --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+
+  --toast-bg: #21262d;
+
+  --scrollbar-track: #0d1117;
+  --scrollbar-thumb: #30363d;
 
   --gradient-start: #58a6ff;
   --gradient-end: #bc8cff;
@@ -113,6 +215,7 @@
 
   --accent-primary: #0969da;
   --accent-primary-hover: #0550ae;
+  --accent-primary-text: #ffffff;
   --accent-secondary: #0969da;
   --accent-success: #1a7f37;
   --accent-warning: #9a6700;
@@ -123,10 +226,16 @@
   --sidebar-active: #e5e7eb;
   --sidebar-text: #656d76;
   --sidebar-text-active: #1f2328;
+  --sidebar-width: 260px;
 
   --card-bg: #ffffff;
   --card-border: #d0d7de;
   --card-shadow: 0 1px 3px rgba(31, 35, 40, 0.12);
+
+  --toast-bg: #f6f8fa;
+
+  --scrollbar-track: #f6f8fa;
+  --scrollbar-thumb: #d0d7de;
 
   --gradient-start: #0969da;
   --gradient-end: #8250df;
@@ -153,6 +262,7 @@
 
   --accent-primary: #bd93f9;
   --accent-primary-hover: #caa9fa;
+  --accent-primary-text: #282a36;
   --accent-secondary: #ff79c6;
   --accent-success: #50fa7b;
   --accent-warning: #f1fa8c;
@@ -163,10 +273,16 @@
   --sidebar-active: #44475a;
   --sidebar-text: #bfbfbf;
   --sidebar-text-active: #f8f8f2;
+  --sidebar-width: 260px;
 
   --card-bg: #21222c;
   --card-border: #44475a;
   --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+
+  --toast-bg: #343746;
+
+  --scrollbar-track: #282a36;
+  --scrollbar-thumb: #44475a;
 
   --gradient-start: #bd93f9;
   --gradient-end: #ff79c6;
@@ -228,35 +344,50 @@ body {
 
 ::selection {
   background: var(--accent-primary);
-  color: white;
+  color: var(--accent-primary-text, white);
+}
+
+/* ── Utilities ─────────────────────────────────────────── */
+
+/* Tabular numerals for statistics and KPI values */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Animations ────────────────────────────────────────── */
+/* Wrapped in prefers-reduced-motion — users who opt out see no motion */
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out forwards;
+  }
 }
 
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-16px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-primary), 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(var(--accent-primary), 0); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-.animate-slide-in-left {
-  animation: slideInLeft 0.3s ease-out forwards;
+/* When reduced motion is preferred, show content immediately without animation */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-in-left {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

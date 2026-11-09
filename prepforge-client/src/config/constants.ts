@@ -51,6 +51,7 @@ export const LANGUAGES = [
 // ── Themes ────────────────────────────────────────────────
 
 export const THEMES: { value: ThemeName; label: string }[] = [
+  { value: 'prepforge-dark', label: 'PrepForge Dark' },
   { value: 'vscode-dark', label: 'VS Code Dark' },
   { value: 'github-dark', label: 'GitHub Dark' },
   { value: 'github-light', label: 'GitHub Light' },

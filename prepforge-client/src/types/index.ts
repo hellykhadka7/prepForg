@@ -49,7 +49,7 @@ export interface DashboardWidget {
   order: number;
 }
 
-export type ThemeName = 'vscode-dark' | 'github-dark' | 'github-light' | 'dracula';
+export type ThemeName = 'prepforge-dark' | 'vscode-dark' | 'github-dark' | 'github-light' | 'dracula';
 
 // ── Auth ───────────────────────────────────────────────────
 
