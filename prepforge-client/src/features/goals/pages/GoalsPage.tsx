@@ -83,8 +83,8 @@ export default function GoalsPage() {
       {/* Overall Progress */}
       <Card className="p-6">
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--gradient-start)] to-[var(--gradient-end)] flex items-center justify-center">
-            <Target className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 rounded-xl bg-[var(--accent-primary)]/15 flex items-center justify-center">
+            <Target className="w-6 h-6 text-[var(--accent-primary)]" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-[var(--text-primary)]">Today's Progress</h2>
@@ -106,7 +106,7 @@ export default function GoalsPage() {
           done={progress?.easyDone || 0}
           target={progress?.easyTarget || 0}
           percentage={easyPct}
-          color="#10b981"
+          color="var(--accent-success)"
           variant="success"
           editing={isEditing}
           editValue={editValues.easyTarget}
@@ -117,7 +117,7 @@ export default function GoalsPage() {
           done={progress?.mediumDone || 0}
           target={progress?.mediumTarget || 0}
           percentage={medPct}
-          color="#f59e0b"
+          color="var(--accent-warning)"
           variant="warning"
           editing={isEditing}
           editValue={editValues.mediumTarget}
@@ -128,7 +128,7 @@ export default function GoalsPage() {
           done={progress?.hardDone || 0}
           target={progress?.hardTarget || 0}
           percentage={hardPct}
-          color="#ef4444"
+          color="var(--accent-error)"
           variant="error"
           editing={isEditing}
           editValue={editValues.hardTarget}
@@ -189,7 +189,7 @@ function GoalCard({
             max={20}
             value={editValue}
             onChange={(e) => onEditChange(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-full px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-primary)] text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--gradient-start)]"
+            className="w-full px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-primary)] text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent-primary)]"
           />
         </div>
       ) : (
