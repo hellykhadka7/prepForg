@@ -74,11 +74,11 @@ export default function SettingsPage() {
     { id: 'data', label: 'Data Management', icon: <Database className="w-4 h-4" /> },
   ] as const;
 
-  const themes: { id: ThemeName; name: string; type: 'dark' | 'light' }[] = [
-    { id: 'vscode-dark', name: 'VS Code Dark', type: 'dark' },
-    { id: 'github-dark', name: 'GitHub Dark', type: 'dark' },
-    { id: 'github-light', name: 'GitHub Light', type: 'light' },
-    { id: 'dracula', name: 'Dracula', type: 'dark' },
+  const themes: { id: ThemeName; name: string; type: 'dark' | 'light'; swatch: [string, string] }[] = [
+    { id: 'vscode-dark', name: 'VS Code Dark', type: 'dark', swatch: ['#1e1e1e', '#007acc'] },
+    { id: 'github-dark', name: 'GitHub Dark', type: 'dark', swatch: ['#0d1117', '#58a6ff'] },
+    { id: 'github-light', name: 'GitHub Light', type: 'light', swatch: ['#ffffff', '#0969da'] },
+    { id: 'dracula', name: 'Dracula', type: 'dark', swatch: ['#282a36', '#bd93f9'] },
   ];
 
   return (
@@ -100,7 +100,7 @@ export default function SettingsPage() {
               className={clsx(
                 'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
                 activeTab === tab.id
-                  ? 'bg-[var(--gradient-start)] text-white shadow-lg shadow-[var(--gradient-start)]/20'
+                  ? 'bg-[var(--accent-primary)] text-white shadow-lg shadow-[var(--accent-primary)]/20'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
               )}
             >
@@ -115,7 +115,7 @@ export default function SettingsPage() {
           {activeTab === 'profile' && (
             <Card className="p-6 border border-[var(--border-primary)] shadow-sm">
               <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-sky-400" />
+                <Shield className="w-5 h-5 text-[var(--accent-primary)]" />
                 Account Details
               </h2>
               <form onSubmit={handleProfileSubmit} className="space-y-4">
@@ -146,11 +146,11 @@ export default function SettingsPage() {
               </form>
 
               <div className="mt-8 pt-6 border-t border-[var(--border-primary)]">
-                <h3 className="text-sm font-bold text-rose-500 mb-2">Danger Zone</h3>
+                <h3 className="text-sm font-bold text-[var(--accent-error)] mb-2">Danger Zone</h3>
                 <p className="text-sm text-[var(--text-secondary)] mb-4">
                   Logging out will clear your current session.
                 </p>
-                <Button variant="outline" onClick={logout} className="gap-2 text-rose-500 border-rose-500/30 hover:bg-rose-500/10">
+                <Button variant="outline" onClick={logout} className="gap-2 text-[var(--accent-error)] border-[var(--accent-error)]/30 hover:bg-[var(--accent-error)]/10">
                   <LogOut className="w-4 h-4" />
                   Log Out
                 </Button>
@@ -161,7 +161,7 @@ export default function SettingsPage() {
           {activeTab === 'theme' && (
             <Card className="p-6 border border-[var(--border-primary)] shadow-sm">
               <h2 className="text-lg font-bold text-[var(--text-primary)] mb-6 flex items-center gap-2">
-                <Palette className="w-5 h-5 text-purple-400" />
+                <Palette className="w-5 h-5 text-[var(--accent-primary)]" />
                 Theme & Appearance
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -172,13 +172,19 @@ export default function SettingsPage() {
                     className={clsx(
                       'flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left',
                       theme === t.id
-                        ? 'border-[var(--gradient-start)] bg-[var(--gradient-start)]/5'
+                        ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/5'
                         : 'border-[var(--border-primary)] bg-[var(--bg-secondary)] hover:border-[var(--text-tertiary)]'
                     )}
                   >
-                    <div>
-                      <div className="font-semibold text-[var(--text-primary)]">{t.name}</div>
-                      <div className="text-xs text-[var(--text-secondary)] mt-1 capitalize">{t.type} Mode</div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex rounded overflow-hidden border border-[var(--border-primary)]">
+                        <div className="w-4 h-4" style={{ background: t.swatch[0] }} />
+                        <div className="w-4 h-4" style={{ background: t.swatch[1] }} />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-[var(--text-primary)]">{t.name}</div>
+                        <div className="text-xs text-[var(--text-secondary)] mt-1 capitalize">{t.type} Mode</div>
+                      </div>
                     </div>
                     {theme === t.id && (
                       <Badge variant="info">Active</Badge>
@@ -192,7 +198,7 @@ export default function SettingsPage() {
           {activeTab === 'notifications' && (
             <Card className="p-6 border border-[var(--border-primary)] shadow-sm">
               <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                <Bell className="w-5 h-5 text-amber-400" />
+                <Bell className="w-5 h-5 text-[var(--accent-warning)]" />
                 Notification Preferences
               </h2>
               <p className="text-sm text-[var(--text-secondary)] mb-6">
@@ -220,7 +226,7 @@ export default function SettingsPage() {
           {activeTab === 'data' && (
             <Card className="p-6 border border-[var(--border-primary)] shadow-sm">
               <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                <Database className="w-5 h-5 text-emerald-400" />
+                <Database className="w-5 h-5 text-[var(--accent-success)]" />
                 Data Management
               </h2>
               <p className="text-sm text-[var(--text-secondary)] mb-4">
