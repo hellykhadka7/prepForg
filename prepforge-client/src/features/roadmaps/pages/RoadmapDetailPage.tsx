@@ -53,7 +53,7 @@ export default function RoadmapDetailPage() {
   const detail = roadmap as unknown as RoadmapDetail;
   const problems = detail.problemIds || [];
   const progress = detail.userProgress;
-  const progressColor = progress.percentage >= 80 ? '#10b981' : progress.percentage >= 50 ? '#f59e0b' : '#06b6d4';
+  const progressColor = progress.percentage >= 80 ? 'var(--accent-success)' : progress.percentage >= 50 ? 'var(--accent-warning)' : 'var(--accent-primary)';
 
   return (
     <div className="space-y-6">
@@ -85,18 +85,18 @@ export default function RoadmapDetailPage() {
       {/* Problem List */}
       <div className="space-y-2">
         {problems.map((problem, index) => (
-          <Card key={problem._id} className={`p-4 ${problem.solved ? 'border-emerald-500/20' : ''}`}>
+          <Card key={problem._id} className={`p-4 ${problem.solved ? 'border-[var(--accent-success)]/20' : ''}`}>
             <div className="flex items-center gap-3">
               <span className="text-xs text-[var(--text-tertiary)] w-6 text-right">{index + 1}</span>
               {problem.solved ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-[var(--accent-success)] flex-shrink-0" />
               ) : (
                 <Circle className="w-5 h-5 text-[var(--text-tertiary)] flex-shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 <Link
                   to={`/app/problems/${problem._id}`}
-                  className="text-sm font-medium text-[var(--text-primary)] hover:text-[var(--gradient-start)] transition-colors"
+                  className="text-sm font-medium text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors"
                 >
                   {problem.title}
                 </Link>

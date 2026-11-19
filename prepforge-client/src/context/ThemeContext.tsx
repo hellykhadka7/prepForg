@@ -11,7 +11,7 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeName>(() => {
-    return (localStorage.getItem('prepforge_theme') as ThemeName) || 'vscode-dark';
+    return (localStorage.getItem('prepforge_theme') as ThemeName) || 'prepforge-dark';
   });
 
   const isDark = theme !== 'github-light';

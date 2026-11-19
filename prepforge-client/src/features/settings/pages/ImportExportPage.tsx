@@ -62,8 +62,8 @@ export default function ImportExportPage() {
         {/* EXPORT SECTION */}
         <Card className="p-6 border border-[var(--border-primary)] shadow-sm">
           <div className="flex items-center gap-3 mb-6 border-b border-[var(--border-primary)] pb-4">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <Download className="w-5 h-5 text-emerald-400" />
+            <div className="w-10 h-10 rounded-full bg-[var(--accent-success)]/10 flex items-center justify-center">
+              <Download className="w-5 h-5 text-[var(--accent-success)]" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-[var(--text-primary)]">Export Data</h2>
@@ -75,7 +75,7 @@ export default function ImportExportPage() {
             <div className="p-4 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-primary)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-                  <FileJson className="w-4 h-4 text-sky-400" />
+                  <FileJson className="w-4 h-4 text-[var(--accent-primary)]" />
                   JSON Export
                 </div>
                 <div className="text-xs text-[var(--text-secondary)] mt-1">All your data in a single JSON file. Best for developers.</div>
@@ -88,7 +88,7 @@ export default function ImportExportPage() {
             <div className="p-4 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-primary)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-                  <FileArchive className="w-4 h-4 text-amber-400" />
+                  <FileArchive className="w-4 h-4 text-[var(--accent-warning)]" />
                   ZIP Archive
                 </div>
                 <div className="text-xs text-[var(--text-secondary)] mt-1">Organized multiple JSON files. Recommended for backups.</div>
@@ -101,7 +101,7 @@ export default function ImportExportPage() {
             <div className="p-4 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-primary)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 opacity-75">
               <div>
                 <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-                  <FileText className="w-4 h-4 text-rose-400" />
+                  <FileText className="w-4 h-4 text-[var(--accent-error)]" />
                   PDF Report
                   <Badge variant="info">Phase 6</Badge>
                 </div>
@@ -113,8 +113,8 @@ export default function ImportExportPage() {
             </div>
           </div>
           
-          <div className="mt-6 p-4 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sm">
-            <h4 className="font-semibold text-sky-400 flex items-center gap-2 mb-1">
+          <div className="mt-6 p-4 rounded-lg bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 text-sm">
+            <h4 className="font-semibold text-[var(--accent-primary)] flex items-center gap-2 mb-1">
               <CheckCircle2 className="w-4 h-4" /> What's included?
             </h4>
             <ul className="list-disc pl-5 text-[var(--text-secondary)] space-y-1 mt-2">
@@ -131,8 +131,8 @@ export default function ImportExportPage() {
         {/* IMPORT SECTION */}
         <Card className="p-6 border border-[var(--border-primary)] shadow-sm">
           <div className="flex items-center gap-3 mb-6 border-b border-[var(--border-primary)] pb-4">
-            <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center">
-              <Upload className="w-5 h-5 text-rose-400" />
+            <div className="w-10 h-10 rounded-full bg-[var(--accent-error)]/10 flex items-center justify-center">
+              <Upload className="w-5 h-5 text-[var(--accent-error)]" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-[var(--text-primary)]">Import Data</h2>
@@ -148,10 +148,10 @@ export default function ImportExportPage() {
             </div>
           </div>
 
-          <div className="mt-6 p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+          <div className="mt-6 p-4 rounded-lg bg-[var(--accent-error)]/10 border border-[var(--accent-error)]/20 text-sm flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-[var(--accent-error)] flex-shrink-0 mt-0.5" />
             <div className="text-[var(--text-secondary)]">
-              <strong className="text-rose-400 block mb-1">Warning</strong>
+              <strong className="text-[var(--accent-error)] block mb-1">Warning</strong>
               When import becomes available, restoring data will overwrite your current progress. Always export your current state before importing.
             </div>
           </div>

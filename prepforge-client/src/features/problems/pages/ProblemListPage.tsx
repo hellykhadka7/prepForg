@@ -45,6 +45,14 @@ const difficultyTabStyle = (active: boolean, diff: Difficulty | 'All') => {
   return `px-4 py-1.5 rounded-full text-sm font-medium border transition-colors cursor-pointer ${colors[diff]}`;
 };
 
+// Mobile abbreviation badge config for status column
+const STATUS_MOBILE: Record<ProblemStatus, { abbr: string; variant: 'success' | 'warning' | 'default' | 'info' }> = {
+  not_started: { abbr: 'NS', variant: 'default' },
+  completed:   { abbr: '✓',  variant: 'success' },
+  on_hold:     { abbr: '⏸',  variant: 'warning' },
+  skipped:     { abbr: 'SK', variant: 'default' },
+};
+
 const difficultyBadgeVariant = (d: Difficulty) =>
   d === 'Easy' ? 'success' : d === 'Medium' ? 'warning' : 'error';
 
@@ -102,35 +110,61 @@ function ProblemRow({ problem, onBookmark, isBookmarking, onEdit }: ProblemRowPr
     <tr
       className={clsx(
         'group border-b border-[var(--border-secondary)] hover:bg-[var(--bg-hover)] transition-colors',
-        problem.status === 'completed' && 'opacity-80'
       )}
     >
-      {/* Status column */}
-      <td className="pl-4 pr-2 py-2.5 w-36">
+      {/* Status column — desktop: icon + select text; mobile: icon + abbrev badge */}
+      <td className="pl-4 pr-2 py-2 w-36">
         <div className={clsx('flex items-center gap-1.5', statusMeta.className, isSettingStatus && 'opacity-50')}>
           {statusMeta.icon}
+          {/* Desktop: full label select (≥md) */}
           <select
             value={problem.status}
             onChange={handleStatusChange}
             disabled={isSettingStatus}
+            aria-label={`Status for ${problem.title}`}
+            onClick={(e) => e.stopPropagation()}
             className={clsx(
-              'text-xs bg-transparent border-none outline-none cursor-pointer appearance-none',
+              'hidden md:block text-xs bg-transparent border-none outline-none cursor-pointer appearance-none',
               'pr-0 font-medium',
               statusMeta.className
             )}
-            aria-label={`Status for ${problem.title}`}
-            onClick={(e) => e.stopPropagation()}
           >
             <option value="not_started" className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">Not Started</option>
             <option value="completed" className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">Completed</option>
             <option value="on_hold" className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">On Hold</option>
             <option value="skipped" className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">Skipped</option>
           </select>
+          {/* Mobile: badge centered in a 44×44px touch-target wrapper; transparent overlay select covers it.
+               min-h/w-[44px] meets WCAG 2.5.5. md:hidden keeps desktop rows compact.
+               focus-within on the wrapper surfaces the focus ring for keyboard users. */}
+          <div
+            className={clsx(
+              'relative md:hidden inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-[5px]',
+              'focus-within:outline focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-[var(--accent-primary)]'
+            )}
+          >
+            <Badge variant={STATUS_MOBILE[problem.status].variant}>
+              {STATUS_MOBILE[problem.status].abbr}
+            </Badge>
+            <select
+              value={problem.status}
+              onChange={handleStatusChange}
+              disabled={isSettingStatus}
+              aria-label={`Status for ${problem.title}`}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <option value="not_started">Not Started</option>
+              <option value="completed">Completed</option>
+              <option value="on_hold">On Hold</option>
+              <option value="skipped">Skipped</option>
+            </select>
+          </div>
         </div>
       </td>
 
       {/* Title column */}
-      <td className="px-3 py-2.5">
+      <td className="px-3 py-2">
         <div className="flex flex-col gap-0.5">
           <Link
             to={ROUTES.PROBLEM_DETAIL(problem._id)}
@@ -145,12 +179,12 @@ function ProblemRow({ problem, onBookmark, isBookmarking, onEdit }: ProblemRowPr
           {problem.patterns.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-0.5">
               {problem.patterns.slice(0, 3).map((p) => (
-                <span key={p} className="text-[10px] px-1.5 py-px rounded bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] border border-[var(--border-secondary)]">
+                <span key={p} className="text-[10px] px-1.5 py-px rounded bg-[var(--bg-elevated)] text-[var(--text-tertiary)]">
                   {p}
                 </span>
               ))}
               {problem.patterns.length > 3 && (
-                <span className="text-[10px] px-1.5 py-px rounded bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]">
+                <span className="text-[10px] px-1.5 py-px rounded bg-[var(--bg-elevated)] text-[var(--text-tertiary)]">
                   +{problem.patterns.length - 3}
                 </span>
               )}
@@ -160,22 +194,22 @@ function ProblemRow({ problem, onBookmark, isBookmarking, onEdit }: ProblemRowPr
       </td>
 
       {/* Difficulty column */}
-      <td className="px-3 py-2.5 w-24">
+      <td className="px-3 py-2 w-24">
         <Badge variant={difficultyBadgeVariant(problem.difficulty)}>
           {problem.difficulty}
         </Badge>
       </td>
 
       {/* Topic column */}
-      <td className="px-3 py-2.5 w-36 hidden md:table-cell">
+      <td className="px-3 py-2 w-36 hidden md:table-cell">
         <span className="text-xs text-[var(--text-secondary)] truncate block max-w-[130px]">
           {problem.topic || '—'}
         </span>
       </td>
 
       {/* Actions column */}
-      <td className="px-3 py-2.5 w-20">
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <td className="px-3 py-2 w-20">
+        <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
           {/* Revision due indicator */}
           {problem.revisionDue && (
             <span title="Revision due">
@@ -350,10 +384,7 @@ export default function ProblemListPage() {
             aria-pressed={activeDifficulty === value}
           >
             {label}
-            <span className={clsx(
-              'ml-1.5 text-[11px] font-normal',
-              activeDifficulty === value ? 'opacity-80' : 'opacity-50'
-            )}>
+            <span className="ml-1.5 text-[11px] font-normal text-[var(--text-tertiary)]">
               {difficultyCount[value]}
             </span>
           </button>
@@ -380,7 +411,7 @@ export default function ProblemListPage() {
             value={filters.status ?? ''}
             onChange={handleStatusFilter}
             className={clsx(
-              'px-3 py-2.5 rounded-lg border text-sm',
+              'h-9 px-3 rounded-lg border text-sm',
               'bg-[var(--bg-input)] border-[var(--border-primary)] text-[var(--text-primary)]',
               'focus:outline-none focus:border-[var(--accent-primary)]',
               'cursor-pointer'
@@ -399,7 +430,7 @@ export default function ProblemListPage() {
             value={filters.pattern ?? ''}
             onChange={handlePatternFilter}
             className={clsx(
-              'px-3 py-2.5 rounded-lg border text-sm hidden sm:block',
+              'h-9 px-3 rounded-lg border text-sm hidden sm:block',
               'bg-[var(--bg-input)] border-[var(--border-primary)] text-[var(--text-primary)]',
               'focus:outline-none focus:border-[var(--accent-primary)]',
               'cursor-pointer'

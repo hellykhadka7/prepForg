@@ -59,10 +59,8 @@ const STATUS_OPTIONS: { value: ProblemStatus; icon: React.ReactNode; label: stri
 
 function StatusSelector({ problemId, currentStatus }: { problemId: string; currentStatus: ProblemStatus }) {
   const { mutate: setStatus, isPending } = useSetProblemStatus();
-  const meta = STATUS_OPTIONS.find(o => o.value === currentStatus) ?? STATUS_OPTIONS[0];
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const next = e.target.value as ProblemStatus;
+  const handleSelect = (next: ProblemStatus) => {
     if (next === currentStatus) return;
     setStatus(
       { problemId, status: next },
@@ -72,30 +70,36 @@ function StatusSelector({ problemId, currentStatus }: { problemId: string; curre
 
   return (
     <div
+      role="group"
+      aria-label="Problem status"
       className={clsx(
-        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border',
-        'border-[var(--border-primary)] bg-[var(--bg-input)]',
-        isPending && 'opacity-50',
-        meta.className
+        'flex items-center rounded-lg border border-[var(--border-primary)] bg-[var(--bg-input)] overflow-hidden',
+        isPending && 'opacity-50 pointer-events-none'
       )}
     >
-      {meta.icon}
-      <select
-        value={currentStatus}
-        onChange={handleChange}
-        disabled={isPending}
-        className={clsx(
-          'text-xs font-medium bg-transparent border-none outline-none cursor-pointer',
-          meta.className
-        )}
-        aria-label="Problem status"
-      >
-        {STATUS_OPTIONS.map(o => (
-          <option key={o.value} value={o.value} className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">
-            {o.label}
-          </option>
-        ))}
-      </select>
+      {STATUS_OPTIONS.map((opt) => {
+        const isActive = opt.value === currentStatus;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            aria-pressed={isActive}
+            aria-label={opt.label}
+            onClick={() => handleSelect(opt.value)}
+            disabled={isPending}
+            className={clsx(
+              'flex items-center gap-1.5 px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-primary)]',
+              isActive
+                ? clsx('bg-[var(--bg-elevated)]', opt.className)
+                : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+            )}
+          >
+            {opt.icon}
+            <span className="hidden sm:inline">{opt.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -145,11 +149,15 @@ export default function ProblemDetailPage() {
           </Link>
 
           <div className="min-w-0">
-            {/* Title row */}
+            {/* Title row — title + difficulty + topic + status icons + custom badge */}
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-[var(--text-primary)] leading-tight">
+              <h1 className="text-[18px] font-semibold text-[var(--text-primary)] leading-tight">
                 {problem.title}
               </h1>
+              <Badge variant={diffVariant}>{problem.difficulty}</Badge>
+              {problem.topic && (
+                <span className="text-xs text-[var(--text-secondary)]">{problem.topic}</span>
+              )}
               {problem.solved && (
                 <span title="Solved">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
@@ -167,36 +175,31 @@ export default function ProblemDetailPage() {
               )}
             </div>
 
-            {/* Meta row */}
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <Badge variant={diffVariant}>{problem.difficulty}</Badge>
-
-              {problem.topic && (
-                <span className="text-xs text-[var(--text-secondary)]">{problem.topic}</span>
-              )}
-
-              {showWeek && (
-                <>
-                  <span className="text-xs text-[var(--text-tertiary)]">•</span>
-                  <span className="text-xs text-[var(--text-secondary)]">Week {problem.week}</span>
-                </>
-              )}
-
-              {/* Pattern pills — max 3 */}
-              {problem.patterns.slice(0, 3).map(p => (
-                <span
-                  key={p}
-                  className="text-[10px] px-1.5 py-px rounded bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] border border-[var(--border-secondary)]"
-                >
-                  {p}
-                </span>
-              ))}
-              {problem.patterns.length > 3 && (
-                <span className="text-[10px] text-[var(--text-tertiary)]">
-                  +{problem.patterns.length - 3}
-                </span>
-              )}
-            </div>
+            {/* Meta row — week + patterns */}
+            {(showWeek || problem.patterns.length > 0) && (
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                {showWeek && (
+                  <>
+                    <span className="text-xs text-[var(--text-tertiary)]">•</span>
+                    <span className="text-xs text-[var(--text-secondary)]">Week {problem.week}</span>
+                  </>
+                )}
+                {/* Pattern pills — max 3 */}
+                {problem.patterns.slice(0, 3).map(p => (
+                  <span
+                    key={p}
+                    className="text-[10px] px-1.5 py-px rounded bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] border border-[var(--border-secondary)]"
+                  >
+                    {p}
+                  </span>
+                ))}
+                {problem.patterns.length > 3 && (
+                  <span className="text-[10px] text-[var(--text-tertiary)]">
+                    +{problem.patterns.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -236,20 +239,26 @@ export default function ProblemDetailPage() {
         {/* Left pane: info tabs */}
         <Card className="w-1/2 flex flex-col p-0 overflow-hidden border border-[var(--border-secondary)]">
           {/* Tab bar */}
-          <div className="flex border-b border-[var(--border-secondary)] overflow-x-auto flex-shrink-0">
+          <div
+            role="tablist"
+            aria-label="Problem detail tabs"
+            className="flex border-b border-[var(--border-secondary)] overflow-x-auto flex-shrink-0"
+          >
             {TAB_LABELS.map(({ value, label }) => (
               <button
                 key={value}
                 id={`tab-${value}`}
+                role="tab"
+                aria-selected={activeTab === value}
+                aria-controls={`tabpanel-${value}`}
                 onClick={() => setActiveTab(value)}
                 className={clsx(
                   'px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-primary)]',
                   activeTab === value
-                    ? 'text-[var(--accent-primary)] border-b-2 border-[var(--accent-primary)] bg-[var(--accent-primary)]/5'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
+                    ? 'text-[var(--text-primary)] border-b-2 border-[var(--accent-primary)]'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
                 )}
-                aria-selected={activeTab === value}
-                role="tab"
               >
                 {label}
               </button>
@@ -257,7 +266,12 @@ export default function ProblemDetailPage() {
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-y-auto p-4 bg-[var(--bg-primary)]">
+          <div
+            id={`tabpanel-${activeTab}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${activeTab}`}
+            className="flex-1 overflow-y-auto p-4 bg-[var(--bg-primary)]"
+          >
             {activeTab === 'description' && <ProblemDescriptionTab problem={problem} />}
             {activeTab === 'solutions' && <ProblemSolutionsTab problemId={problem._id} />}
             {activeTab === 'notes' && <ProblemNotesTab problemId={problem._id} />}

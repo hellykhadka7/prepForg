@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { analyticsApi } from '../../../api/analytics.api';
 import { activityApi } from '../../../api/activity.api';
 import { Card, Spinner, Badge } from '../../../components/ui';
@@ -9,12 +10,23 @@ import {
 } from 'recharts';
 import { TrendingUp, Target, Zap, Brain, Clock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
+import type { ThemeName } from '../../../types';
 
-const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#6366f1', '#06b6d4', '#ec4899', '#8b5cf6', '#14b8a6'];
-const DIFFICULTY_COLORS: Record<string, string> = { Easy: '#10b981', Medium: '#f59e0b', Hard: '#ef4444' };
+// Theme-aware hex colours for Recharts SVG fills (CSS vars unsupported in SVG fill)
+// Each set mirrors the theme's --accent-success/warning/error/primary tokens from index.css
+const THEME_COLORS: Record<ThemeName, { Easy: string; Medium: string; Hard: string; primary: string; colors: string[] }> = {
+  'prepforge-dark': { Easy: '#34D399', Medium: '#FBBF24', Hard: '#FB7185', primary: '#818CF8', colors: ['#818CF8','#34D399','#FBBF24','#FB7185','#38BDF8','#A78BFA','#2DD4BF','#F472B6'] },
+  'vscode-dark':    { Easy: '#4ec9b0', Medium: '#cca700', Hard: '#f14c4c', primary: '#007acc', colors: ['#007acc','#4ec9b0','#cca700','#f14c4c','#38BDF8','#A78BFA','#2DD4BF','#F472B6'] },
+  'github-dark':    { Easy: '#3fb950', Medium: '#d29922', Hard: '#f85149', primary: '#58a6ff', colors: ['#58a6ff','#3fb950','#d29922','#f85149','#38BDF8','#A78BFA','#2DD4BF','#F472B6'] },
+  'github-light':   { Easy: '#1a7f37', Medium: '#9a6700', Hard: '#cf222e', primary: '#0969da', colors: ['#0969da','#1a7f37','#9a6700','#cf222e','#0550ae','#8250df','#0969da','#cf222e'] },
+  'dracula':        { Easy: '#50fa7b', Medium: '#f1fa8c', Hard: '#ff5555', primary: '#bd93f9', colors: ['#bd93f9','#50fa7b','#f1fa8c','#ff5555','#38BDF8','#A78BFA','#2DD4BF','#F472B6'] },
+};
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const tc = useMemo(() => THEME_COLORS[theme] ?? THEME_COLORS['prepforge-dark'], [theme]);
 
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ['analytics', 'summary'],
@@ -88,10 +100,10 @@ export default function AnalyticsPage() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={<Target className="w-5 h-5" />} label="Problems Solved" value={totalSolved} color="text-emerald-400" />
-        <StatCard icon={<Zap className="w-5 h-5" />} label="Total XP" value={user?.totalXP || 0} color="text-violet-400" />
-        <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Current Streak" value={streak?.currentStreak || 0} color="text-amber-400" suffix=" days" />
-        <StatCard icon={<Brain className="w-5 h-5" />} label="Level" value={user?.currentLevel || 1} color="text-sky-400" />
+        <StatCard icon={<Target className="w-5 h-5" />} label="Problems Solved" value={totalSolved} color="text-[var(--accent-success)]" />
+        <StatCard icon={<Zap className="w-5 h-5" />} label="Total XP" value={user?.totalXP || 0} color="text-[var(--accent-primary)]" />
+        <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Current Streak" value={streak?.currentStreak || 0} color="text-[var(--accent-warning)]" suffix=" days" />
+        <StatCard icon={<Brain className="w-5 h-5" />} label="Level" value={user?.currentLevel || 1} color="text-[var(--accent-primary)]" />
       </div>
 
       {/* Row 1: Weekly Progress + Difficulty Distribution */}
@@ -111,9 +123,9 @@ export default function AnalyticsPage() {
                   labelStyle={{ color: 'var(--text-primary)' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="easy" name="Easy" fill="#10b981" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="medium" name="Medium" fill="#f59e0b" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="hard" name="Hard" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="easy"   name="Easy"   fill={tc.Easy}   radius={[2, 2, 0, 0]} />
+                <Bar dataKey="medium" name="Medium" fill={tc.Medium} radius={[2, 2, 0, 0]} />
+                <Bar dataKey="hard"   name="Hard"   fill={tc.Hard}   radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -139,7 +151,7 @@ export default function AnalyticsPage() {
                   labelLine={false}
                 >
                   {difficultyData.map((entry) => (
-                    <Cell key={entry.name} fill={DIFFICULTY_COLORS[entry.name] || '#6366f1'} />
+                    <Cell key={entry.name} fill={tc[entry.name as keyof typeof tc] as string || tc.primary} />
                   ))}
                 </Pie>
                 <RechartsTooltip
@@ -173,7 +185,7 @@ export default function AnalyticsPage() {
                   contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 8 }}
                   labelFormatter={(d) => new Date(String(d)).toLocaleDateString()}
                 />
-                <Line type="monotone" dataKey="cumulativeXP" name="Total XP" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="cumulativeXP" name="Total XP" stroke={tc.primary} strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -191,7 +203,7 @@ export default function AnalyticsPage() {
                 <PolarGrid stroke="var(--border-primary)" />
                 <PolarAngleAxis dataKey="topic" tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }} />
                 <PolarRadiusAxis tick={{ fill: 'var(--text-tertiary)', fontSize: 9 }} />
-                <Radar name="Solved" dataKey="solved" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.3} />
+                <Radar name="Solved" dataKey="solved" stroke={tc.primary} fill={tc.primary} fillOpacity={0.15} />
               </RadarChart>
             </ResponsiveContainer>
           ) : (
@@ -217,7 +229,7 @@ export default function AnalyticsPage() {
                 />
                 <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]}>
                   {patternData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    <Cell key={i} fill={tc.colors[i % tc.colors.length]} />
                   ))}
                 </Bar>
               </BarChart>
@@ -235,7 +247,7 @@ export default function AnalyticsPage() {
             <div className="space-y-3">
               {mistakeData.map((m, i) => (
                 <div key={m.name} className="flex items-center gap-3">
-                  <AlertTriangle className="w-4 h-4" style={{ color: COLORS[i % COLORS.length] }} />
+                  <AlertTriangle className="w-4 h-4" style={{ color: tc.colors[i % tc.colors.length] }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm text-[var(--text-primary)] truncate">{m.name}</span>
@@ -246,7 +258,7 @@ export default function AnalyticsPage() {
                         className="h-full rounded-full transition-all duration-500"
                         style={{
                           width: `${Math.min(100, (m.count / Math.max(...mistakeData.map(d => d.count))) * 100)}%`,
-                          backgroundColor: COLORS[i % COLORS.length],
+                          backgroundColor: tc.colors[i % tc.colors.length],
                         }}
                       />
                     </div>
@@ -283,7 +295,7 @@ export default function AnalyticsPage() {
                       className="h-full rounded-full"
                       style={{
                         width: `${(c.avgConfidence / 5) * 100}%`,
-                        backgroundColor: DIFFICULTY_COLORS[c._id],
+                        backgroundColor: tc[c._id as keyof typeof tc] as string,
                       }}
                     />
                   </div>
@@ -342,7 +354,7 @@ export default function AnalyticsPage() {
                       className="h-full rounded-full"
                       style={{
                         width: `${summary.revisions[key]}%`,
-                        backgroundColor: COLORS[i],
+                        backgroundColor: tc.colors[i],
                       }}
                     />
                   </div>

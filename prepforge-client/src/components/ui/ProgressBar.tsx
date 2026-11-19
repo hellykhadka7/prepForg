@@ -10,9 +10,9 @@ interface ProgressBarProps {
 }
 
 const sizeStyles = {
-  sm: 'h-1.5',
-  md: 'h-2.5',
-  lg: 'h-4',
+  sm: 'h-1',
+  md: 'h-1.5',
+  lg: 'h-2.5',
 };
 
 export default function ProgressBar({
@@ -29,16 +29,22 @@ export default function ProgressBar({
     <div className={clsx('w-full', className)}>
       {showLabel && (
         <div className="flex justify-between mb-1">
-          <span className="text-xs text-[var(--text-secondary)]">{Math.round(percentage)}%</span>
-          <span className="text-xs text-[var(--text-tertiary)]">{value}/{max}</span>
+          <span className="text-xs text-[var(--text-secondary)] tabular">{Math.round(percentage)}%</span>
+          <span className="text-xs text-[var(--text-tertiary)] tabular">{value}/{max}</span>
         </div>
       )}
-      <div className={clsx('w-full rounded-full bg-[var(--bg-tertiary)] overflow-hidden', sizeStyles[size])}>
+      <div
+        className={clsx('w-full rounded-full bg-[var(--bg-elevated)] overflow-hidden', sizeStyles[size])}
+        role="progressbar"
+        aria-valuenow={Math.round(percentage)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
           className="h-full rounded-full transition-all duration-500 ease-out"
           style={{
             width: `${percentage}%`,
-            background: color || 'linear-gradient(90deg, var(--gradient-start), var(--gradient-end))',
+            background: color ?? 'var(--accent-primary)',
           }}
         />
       </div>

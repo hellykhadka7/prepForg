@@ -47,8 +47,8 @@ export default function RoadmapsPage() {
       {system.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <Map className="w-4 h-4 text-violet-400" />
-            <h2 className="text-sm font-semibold text-violet-400 uppercase tracking-wider">
+            <Map className="w-4 h-4 text-[var(--accent-primary)]" />
+            <h2 className="text-sm font-semibold text-[var(--accent-primary)] uppercase tracking-wider">
               DSA Roadmaps ({system.length})
             </h2>
           </div>
@@ -64,8 +64,8 @@ export default function RoadmapsPage() {
       {personal.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <BookOpen className="w-4 h-4 text-sky-400" />
-            <h2 className="text-sm font-semibold text-sky-400 uppercase tracking-wider">
+            <BookOpen className="w-4 h-4 text-[var(--text-secondary)]" />
+            <h2 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
               My Roadmaps ({personal.length})
             </h2>
           </div>
@@ -88,16 +88,16 @@ function RoadmapCard({ roadmap }: { roadmap: RoadmapWithProgress }) {
   const total = roadmap.problemCount || 0;
 
   const progressColor =
-    pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : pct >= 20 ? '#06b6d4' : 'var(--gradient-start)';
+    pct >= 80 ? 'var(--accent-success)' : pct >= 50 ? 'var(--accent-warning)' : 'var(--accent-primary)';
 
   return (
     <Link to={`/app/roadmaps/${roadmap._id}`}>
-      <Card className="p-5 hover:border-[var(--gradient-start)] transition-colors cursor-pointer group h-full">
+      <Card className="p-5 hover:border-[var(--accent-primary)]/30 transition-colors cursor-pointer group h-full">
         <div className="flex items-start justify-between mb-3">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--gradient-start)] transition-colors">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
             {roadmap.name}
           </h3>
-          <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)] group-hover:text-[var(--gradient-start)] transition-colors" />
+          <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)] group-hover:text-[var(--accent-primary)] transition-colors" />
         </div>
 
         {roadmap.description && (

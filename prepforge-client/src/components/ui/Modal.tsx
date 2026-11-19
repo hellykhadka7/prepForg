@@ -20,8 +20,9 @@ const sizeStyles = {
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md', hideCloseButton }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const panelRef  = useRef<HTMLDivElement>(null);
 
-  // Close on Escape
+  // Close on Escape; trap body scroll
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -29,6 +30,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', h
     if (isOpen) {
       document.addEventListener('keydown', handler);
       document.body.style.overflow = 'hidden';
+      // Move focus into the modal panel
+      setTimeout(() => panelRef.current?.focus(), 20);
     }
     return () => {
       document.removeEventListener('keydown', handler);
@@ -43,15 +46,20 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', h
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      aria-modal="true"
+      role="dialog"
+      aria-labelledby={title ? 'modal-title' : undefined}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-      {/* Content */}
+      {/* Panel */}
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className={clsx(
-          'relative w-full rounded-xl border',
-          'bg-[var(--bg-secondary)] border-[var(--border-primary)]',
+          'relative w-full rounded-xl border outline-none',
+          'bg-[var(--bg-elevated)] border-[var(--border-primary)]',
           'shadow-2xl',
           'animate-fade-in',
           sizeStyles[size]
@@ -59,14 +67,19 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', h
       >
         {/* Header */}
         {(title || !hideCloseButton) && (
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-primary)]">
-            {title && <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>}
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-primary)]">
+            {title && (
+              <h2 id="modal-title" className="text-base font-semibold text-[var(--text-primary)]">
+                {title}
+              </h2>
+            )}
             {!hideCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                aria-label="Close dialog"
+                className="ml-auto p-1.5 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>

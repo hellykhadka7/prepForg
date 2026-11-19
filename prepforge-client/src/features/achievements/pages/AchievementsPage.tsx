@@ -33,7 +33,7 @@ export default function AchievementsPage() {
       {/* Unlocked */}
       {unlocked.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider mb-3">
+          <h2 className="text-sm font-semibold text-[var(--accent-success)] uppercase tracking-wider mb-3">
             🏆 Unlocked ({unlocked.length})
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -63,14 +63,14 @@ export default function AchievementsPage() {
 
 function AchievementCard({ achievement }: { achievement: AchievementDefinition }) {
   return (
-    <Card className={`p-4 ${achievement.unlocked ? 'border-emerald-500/20 bg-emerald-500/5' : 'opacity-60'}`}>
+    <Card className={`p-4 ${achievement.unlocked ? 'border-[var(--accent-success)]/20 bg-[var(--accent-success)]/5' : 'opacity-60'}`}>
       <div className="flex items-start gap-3">
         <span className="text-2xl">{achievement.icon}</span>
         <div>
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">{achievement.name}</h3>
           <p className="text-xs text-[var(--text-secondary)] mt-0.5">{achievement.description}</p>
           {achievement.unlocked && achievement.unlockedAt && (
-            <p className="text-xs text-emerald-400 mt-1">
+            <p className="text-xs text-[var(--accent-success)] mt-1">
               Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
             </p>
           )}
